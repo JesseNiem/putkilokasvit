@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAAT25 Kasviharjoitus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #2c2c2c;
+            color: white;
+        }
+        img {
+            width: 500px;
+            height: auto;
+            border: 2px solid #000;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 25px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        #score {
+            font-size: 20px;
+            margin-top: 15px;
+        }
+        #options {
+            display: none;
+        }
+        #answerInput {
+            margin-top: 20px;
+            font-size: 20px;
+            padding: 8px;
+            width: 60%;
+            background-color: #444;
+            color: white;
+            border: 1px solid #666;
+        }
+        #answerInstruction {
+            font-size: 18px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LAAT25 Kasviharjoitus</h1>
+    <div id="quiz">
+        <img id="plantImage" src="" alt="Kasvin kuva" onclick="showOptions()">
+        <div id="options">
+            <button onclick="checkAnswer(0)"></button>
+            <button onclick="checkAnswer(1)"></button>
+            <button onclick="checkAnswer(2)"></button>
+        </div>
+        <p id="result"></p>
+        <p id="score"></p>
+        <p id="answerInstruction">Klikkaamalla kuvaa saat vaihtoehdot, tai voit kirjoittaa kasvin nimen suoraan tähän:</p>
+        <input type="text" id="answerInput" placeholder="Kirjoita kasvin nimi ja paina Enter">
+    </div>
+
+    <script>
+        const allPlants = [
+            "ahomansikka","ahomatara","aho-orvokki","ahosuolaheinä","ajuruoho","haapa","harmaaleppä","heinätähtimö","hieskoivu",
+            "hiirenporras","hiirenvirna","hilla, lakka, muurain","huopaohdake","iso- ja pikkukarpalo","isotalvikki","jouhivihvilä",
+            "juolukka","järvikaisla","järviruoko","kaarlenvaltikka","kanerva","kangasmaitikka","karhunputki","karhunruoho","kataja",
+            "keltano","kevätpiippo","kiiltopaju","kirkiruoho","kissankello","kissankäpälä","koiranputki","korpiorvokki","kotipihlaja",
+            "kullero","kultapiisku","kurjenjalka","kuusi","käenkaali, ketunleipä","lettovilla","lillukka","luhtavilla","lääte",
+            "maariankämmekkä","maitohorsma","mesiangervo","mesimarja","metsäkurjenpolvi","metsälauha","metsämaitikka","metsäruusu",
+            "metsätähti","mustikka","mänty","neidonkenkä","niittyleinikki","niittysuolaheinä","nokkonen","nuokkuhelmikkä","nuokkutalvikki",
+            "nurmilauha","näsiä","ojakärsämö","ojakellukka","oravanmarja","peltosaunio, saunakukka","pietaryrtti","piharatamo",
+            "pihasaunio","pihatähtimö","pikkulaukku","pohjanlumme","pohjanpaju","pohjanpunaherukka","poimulehti","pulskaneilikka",
+            "pullosara","puna-ailakki","puna-apila","punakonnanmarja","puolukka","pyöreälehtikihokki","päivänkakkara","raate","raita",
+            "rauduskoivu","rentukka","riekonmarja","ruohokanukka","rätvänä","rönsyleinikki","siankärsämö","sianpuolukka","silmäruoho",
+            "sudenmarja","suokukka","suopursu","syysmaitiainen","tikankontti","timotei","tuomi","tupasluikka","tupasvilla","tähtitalvikki",
+            "ulpukka","vadelma","vaivaiskoivu","valkoapila","vanamo","variksenmarja","villapääluikka","vilukko","voikukka","yökönlehdet (valkoinen ja sininen)"
+        ];
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function fetchWikimediaImage(name) {
+            const searchTerm = name.split(',')[0];
+            const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&pithumbsize=500&titles=${encodeURIComponent(searchTerm)}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const pages = data.query.pages;
+                const firstPage = Object.values(pages)[0];
+                return firstPage?.thumbnail?.source || null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function fetchiNaturalistImage(name) {
+            const searchTerm = name.split(',')[0];
+            const url = `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(searchTerm)}&rank=species`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.results[0]?.default_photo?.medium_url || null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function fetchGBIFImage(name) {
+            const searchTerm = name.split(',')[0];
+            const url = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(searchTerm)}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.usageKey) {
+                    const mediaUrl = `https://api.gbif.org/v1/species/${data.usageKey}/media`;
+                    const mediaResponse = await fetch(mediaUrl);
+                    const mediaData = await mediaResponse.json();
+                    return mediaData.results[0]?.identifier || null;
+                }
+            } catch {
+                return null;
+            }
+            return null;
+        }
+
+        async function findPlantImage(name) {
+            let imageUrl = await fetchWikimediaImage(name);
+            if (imageUrl) return imageUrl;
+
+            imageUrl = await fetchiNaturalistImage(name);
+            if (imageUrl) return imageUrl;
+
+            imageUrl = await fetchGBIFImage(name);
+            if (imageUrl) return imageUrl;
+
+            return "https://upload.wikimedia.org/wikipedia/commons/a/ac/No_image_available.svg";
+        }
+
+        let shuffledPlants = [];
+        let currentPlant;
+        let correctCount = 0;
+        let totalPoints = 0;
+        let questionIndex = 0;
+        let currentOptions = [];
+
+        async function loadQuiz() {
+            if (questionIndex >= shuffledPlants.length) {
+                const message = `Sait ${correctCount}/${shuffledPlants.length} oikein ja yhteensä ${totalPoints.toFixed(1)} pistettä!`;
+                document.getElementById('quiz').innerHTML = `<h2>${message}</h2>`;
+                return;
+            }
+
+            currentPlant = shuffledPlants[questionIndex];
+            const imageUrl = await findPlantImage(currentPlant);
+            document.getElementById('plantImage').src = imageUrl;
+            document.getElementById('result').textContent = '';
+            document.getElementById('score').textContent = `Kysymys ${questionIndex + 1}/${shuffledPlants.length} — Oikein: ${correctCount} — Pisteet: ${totalPoints.toFixed(1)}`;
+            document.getElementById('options').style.display = 'none';
+            document.getElementById('answerInput').value = '';
+        }
+
+        function showOptions() {
+            const options = [currentPlant];
+            while (options.length < 3) {
+                const randomPlant = allPlants[Math.floor(Math.random() * allPlants.length)];
+                if (!options.includes(randomPlant)) {
+                    options.push(randomPlant);
+                }
+            }
+            currentOptions = shuffle(options);
+            const buttons = document.getElementById('options').children;
+            buttons[0].textContent = currentOptions[0];
+            buttons[1].textContent = currentOptions[1];
+            buttons[2].textContent = currentOptions[2];
+            document.getElementById('options').style.display = 'block';
+        }
+
+        function checkAnswer(index) {
+            if (currentOptions[index] === currentPlant) {
+                document.getElementById('result').textContent = 'Oikein!';
+                correctCount++;
+                totalPoints += 0.5;
+            } else {
+                document.getElementById('result').textContent = `Väärin! Oikea vastaus oli: ${currentPlant}`;
+            }
+            questionIndex++;
+            setTimeout(loadQuiz, 1500);
+        }
+
+        document.getElementById('answerInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                const userInput = this.value.trim().toLowerCase();
+                if (userInput === currentPlant.toLowerCase()) {
+                    document.getElementById('result').textContent = 'OIKEIN!';
+                    correctCount++;
+                    totalPoints += 1;
+                } else {
+                    document.getElementById('result').textContent = `Väärin! Oikea vastaus oli: ${currentPlant}`;
+                }
+                questionIndex++;
+                setTimeout(loadQuiz, 1500);
+            }
+        });
+
+        window.onload = () => {
+            shuffledPlants = shuffle([...allPlants]);
+            loadQuiz();
+        };
+    </script>
+</body>
+</html>
