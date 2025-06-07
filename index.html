@@ -86,6 +86,20 @@
             "ulpukka","vadelma","vaivaiskoivu","valkoapila","vanamo","variksenmarja","villapääluikka","vilukko","voikukka","yökönlehdet (valkoinen ja sininen)"
         ];
 
+        const customImages = {
+            "voikukka": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Taraxacum_officinale_-_blowball.jpg",
+            "iso- ja pikkukarpalo": "https://upload.wikimedia.org/wikipedia/commons/8/83/Vaccinium_oxycoccos1.jpg",
+            "haapa": "https://upload.wikimedia.org/wikipedia/commons/8/84/Populus_tremula_Leaves.jpg",
+            "raita": "https://upload.wikimedia.org/wikipedia/commons/9/9b/Salix_caprea1.jpg",
+            "poimulehti": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Alchemilla_mollis_002.JPG",
+            "yökönlehdet (valkoinen ja sininen)": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Linnaea_borealis_003.JPG",
+            "kataja": "https://upload.wikimedia.org/wikipedia/commons/2/26/Juniperus_communis2.jpg",
+            "hiirenporras": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Athyrium_filix-femina0.jpg",
+            "silmäruoho": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Euphrasia_officinalis_flowers.jpg",
+            "kanerva": "https://upload.wikimedia.org/wikipedia/commons/3/37/Calluna_vulgaris_001.jpg",
+            "karhunruoho": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Saussurea_alpina_170807.jpg"
+        };
+
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -139,6 +153,11 @@
         }
 
         async function findPlantImage(name) {
+            const simplified = name.toLowerCase();
+            if (customImages[simplified]) {
+                return customImages[simplified];
+            }
+
             let imageUrl = await fetchWikimediaImage(name);
             if (imageUrl) return imageUrl;
 
